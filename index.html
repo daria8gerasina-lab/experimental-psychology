@@ -43,67 +43,121 @@ async function copyCSV(){const csv=buildCSV();const status=document.getElementBy
 function exportCSV(){const csv=buildCSV();const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});let link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download='color_reading_P'+String(id).padStart(2,'0')+'.csv';link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1500)}
 setup();</script>
 <script>
-/* Persistent anonymous study collection — results API stores complete participants on server. */
-const STUDY_API='https://ofmtjnvrmjvkalbhvtqd.supabase.co/functions/v1/reading-color-stats';
-const PENDING_KEY='exp-psych-reading-pending-v1';
-function getPending(){try{return JSON.parse(localStorage.getItem(PENDING_KEY)||'null')}catch{return null}}
-function savePending(record){try{localStorage.setItem(PENDING_KEY,JSON.stringify(record))}catch{}}
-function clearPending(){try{localStorage.removeItem(PENDING_KEY)}catch{}}
-function fmtNumber(value,unit=''){return value===null||value===undefined?'—':Number(value).toLocaleString('ru-RU',{maximumFractionDigits:1})+unit}
+/* Opt-in public classroom experiment, automatic code assignment and live report. */
+const LIVE_API='https://ofmtjnvrmjvkalbhvtqd.supabase.co/functions/v1/reading-color-live-v2';
+const SESSION_KEY_V2='reading-color-session-v2';
+const PENDING_KEY_V2='reading-color-pending-v2';
+const oldBeginV2=window.begin;
+const v2Get=k=>{try{return JSON.parse(localStorage.getItem(k)||'null')}catch{return null}};
+const v2Set=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
+const v2Del=k=>{try{localStorage.removeItem(k)}catch{}};
+const v2Num=(v,unit='')=>v===null||v===undefined?'—':Number(v).toLocaleString('ru-RU',{maximumFractionDigits:1})+unit;
+const v2UUID=()=>crypto.randomUUID?crypto.randomUUID():'10000000-1000-4000-8000-'+String(Date.now()).slice(-12);
+async function v2Api(method,payload){
+ const response=await fetch(LIVE_API,{method,headers:payload?{'Content-Type':'application/json'}:{},...(payload?{body:JSON.stringify(payload)}:{}),cache:'no-store'});
+ const data=await response.json();
+ if(!response.ok)throw Error(data.error||'Ошибка сервиса '+response.status);
+ return data;
+}
 window.setup=function(){
- const pending=getPending();
- root.innerHTML='<section class="panel"><h2>Подготовка</h2><p>Каждый участник читает три разных текста, по одному на каждый цвет. Читайте <strong>про себя</strong>, в обычном темпе. После завершения каждого текста будут три вопроса по содержанию.</p><div class="warning">Участие добровольное. Введите выданный организатором уникальный номер участника. Не вводите имя или телефон. Для сопоставимости результатов желательно использовать одинаковое устройство и настройки яркости.</div><label>Код участника (1–36): <input id="pid" type="number" min="1" max="36" placeholder="Например, 7" value=""></label><p class="small muted">Для каждого номера задан свой порядок цветов и текстов. Один номер можно сохранить только один раз.</p><p><button onclick="begin()">Начать эксперимент</button> <button class="secondary" onclick="showStats()">Статистика группы</button></p>'+(pending?'<div class="warning">На этом устройстве есть результат P'+String(pending.participant_code).padStart(2,'0')+', который ещё не удалось отправить.<p><button onclick="retrySave()">Повторить сохранение</button></p></div>':'')+'<p id="cloudStatus" class="muted small"></p></section>';
+ const pending=v2Get(PENDING_KEY_V2),session=v2Get(SESSION_KEY_V2);
+ const resume=session&&session.participant_code&&!pending?
+ '<div class="warning"><strong>Незавершённый эксперимент:</strong> '+esc(session.display_name)+'. Можно начать три пробы заново.<p><button class="secondary" onclick="v2Resume()">Продолжить с начала</button></p></div>':'';
+ const waiting=pending?'<div class="warning"><strong>Есть несохранённые результаты.</strong> Не закрывайте страницу до подтверждения отправки.<p><button onclick="retrySave()">Повторить сохранение</button></p></div>':'';
+ root.innerHTML='<section class="panel"><h2>Эксперимент: цвет шрифта и скорость чтения</h2>'+
+ '<p>Вам предстоит прочитать три небольших текста и ответить на три вопроса после каждого. Время чтения фиксируется автоматически.</p>'+
+ '<div class="warning">Участие добровольное. Введите <strong>имя или короткий псевдоним</strong> (например, «Даша Г.» или «Киви»). Псевдоним и факт завершения будут видны всем посетителям публичной страницы статистики. Не вводите фамилию целиком, телефон и другие личные данные. Не проходите тест одновременно с прослушиванием доклада.</div>'+
+ '<label for="v2-name"><strong>Как вас обозначить в списке?</strong></label><p><input id="v2-name" type="text" maxlength="32" placeholder="Например, Даша Г." autocomplete="off" style="font-size:16px;padding:12px;border:1px solid #bac7d7;border-radius:9px;width:100%;max-width:330px"></p>'+
+ '<label style="display:block;line-height:1.5;margin:8px 0 16px"><input id="v2-consent" type="checkbox"> Я согласен(на), чтобы введённое имя/псевдоним и факт прохождения отображались в общей статистике.</label>'+
+ '<p><button onclick="begin()">Начать эксперимент</button> <button class="secondary" onclick="showStats()">Статистика и выводы</button></p>'+
+ '<p class="small muted">Номер участника и порядок текстов назначаются автоматически. Организатору ничего распределять не нужно. Для сравнения желательно пользоваться одинаковыми устройствами и условиями освещения.</p>'+
+ resume+waiting+'<p id="v2-feedback" class="muted small"></p></section>';
+};
+window.begin=async function(){
+ const name=document.getElementById('v2-name')?.value.trim().replace(/\s+/g,' ');
+ if(!name||name.length<2||name.length>32){alert('Введите имя или псевдоним длиной от 2 до 32 символов');return}
+ if(!document.getElementById('v2-consent')?.checked){alert('Для отображения в списке участников необходимо согласие. Можно использовать вымышленный псевдоним.');return}
+ if(v2Get(PENDING_KEY_V2)){alert('Сначала сохраните результат предыдущего прохождения');return}
+ const button=document.querySelector('button[onclick="begin()"]');if(button)button.disabled=true;
+ const message=document.getElementById('v2-feedback');if(message)message.textContent='Назначаем индивидуальный порядок текстов…';
+ let session=v2Get(SESSION_KEY_V2);
+ if(!session||session.display_name!==name||session.participant_code){session={session_id:v2UUID(),display_name:name};v2Set(SESSION_KEY_V2,session)}
+ try{
+  const data=await v2Api('POST',{action:'register',session_id:session.session_id,display_name:name});
+  session.participant_code=Number(data.participant_code);
+  v2Set(SESSION_KEY_V2,session);
+  v2Start(session.participant_code);
+ }catch(e){if(message)message.textContent='Не удалось запустить: '+String(e.message||e);if(button)button.disabled=false}
+};
+function v2Start(code){
+ root.innerHTML='<section class="panel"><input type="hidden" id="pid" value="'+Number(code)+'"><p>Загружаем инструкцию…</p></section>';
+ oldBeginV2();
+}
+window.v2Resume=function(){
+ const session=v2Get(SESSION_KEY_V2);
+ if(session&&session.participant_code)v2Start(session.participant_code);else setup();
 };
 window.complete=function(){
- const rows=responses.map(r=>'<tr><td>'+r.trial+'</td><td>'+esc(r.color)+'</td><td>'+r.seconds+'</td><td>'+r.wpm+'</td><td>'+r.comprehension_correct+'/3</td></tr>').join('');
- const payload={
-   participant_code:id,
-   submission_id:(crypto.randomUUID?crypto.randomUUID(): '10000000-1000-4000-8000-'+String(Date.now()).slice(-12)),
-   trials:responses.map(r=>({trial:r.trial,color:r.color,text_id:r.text_id,words:r.words,seconds:r.seconds,comprehension_correct:r.comprehension_correct}))
- };
- savePending(payload);
- root.innerHTML='<section class="panel"><h2>Эксперимент завершён</h2><p>Все три текста прочитаны. Результаты отправляются в общую базу.</p><div style="overflow-x:auto"><table><thead><tr><th>№</th><th>Цвет</th><th>Сек.</th><th>Слов/мин</th><th>Верно</th></tr></thead><tbody>'+rows+'</tbody></table></div><p id="cloudStatus" class="warning">Сохраняем результаты…</p><p><button onclick="retrySave()">Повторить отправку</button> <button class="secondary" onclick="showStats()">Общая статистика</button></p><p><button class="secondary" onclick="copyCSV()">Скопировать CSV</button> <button class="secondary" onclick="exportCSV()">Скачать CSV</button> <button class="secondary" onclick="setup()">На главную</button></p><p id="copyStatus" class="small muted"></p><textarea id="copyFallback" style="display:none;width:100%;min-height:120px" readonly></textarea></section>';
- sendResult(payload);
+ const session=v2Get(SESSION_KEY_V2);
+ if(!session||session.participant_code!==id){root.innerHTML='<section class="panel"><h2>Не удалось подтвердить участника</h2><button onclick="setup()">Вернуться</button></section>';return}
+ const payload={action:'finish',session_id:session.session_id,participant_code:session.participant_code,
+  trials:responses.map(r=>({trial:r.trial,color:r.color,text_id:r.text_id,words:r.words,seconds:r.seconds,comprehension_correct:r.comprehension_correct}))};
+ v2Set(PENDING_KEY_V2,payload);
+ const rows=responses.map(r=>'<tr><td>'+r.trial+'</td><td>'+esc(r.color)+'</td><td>'+v2Num(r.wpm)+'</td><td>'+r.comprehension_correct+'/3</td></tr>').join('');
+ root.innerHTML='<section class="panel"><h2>Все тексты прочитаны!</h2><p>Результаты участника '+esc(session.display_name)+' — '+esc('№'+id)+'.</p>'+
+ '<table><thead><tr><th>Проба</th><th>Цвет</th><th>Слов/мин</th><th>Понимание</th></tr></thead><tbody>'+rows+'</tbody></table>'+
+ '<p id="v2-save" class="warning">Сохраняем результаты…</p><p><button onclick="retrySave()">Повторить сохранение</button> <button class="secondary" onclick="showStats()">Открыть статистику</button></p>'+
+ '<p><button class="secondary" onclick="copyCSV()">Копировать свои результаты</button></p><p id="copyStatus" class="small muted"></p><textarea id="copyFallback" style="display:none;width:100%;min-height:110px" readonly></textarea></section>';
+ v2Send(payload);
 };
-async function sendResult(payload){
- const status=document.getElementById('cloudStatus');
- if(status)status.textContent='Отправляем результаты…';
+async function v2Send(payload){
+ const label=document.getElementById('v2-save');if(label)label.textContent='Сохраняем результаты…';
  try{
-  const response=await fetch(STUDY_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-  const body=await response.json();
-  if(!response.ok)throw new Error(body.error||'Ошибка '+response.status);
-  clearPending();
-  const current=document.getElementById('cloudStatus');
-  if(current)current.textContent='✓ Результат участника P'+String(payload.participant_code).padStart(2,'0')+' сохранён в общей базе. Он уже учтён в статистике.';
- }catch(error){
-  const current=document.getElementById('cloudStatus');
-  if(current)current.textContent='Не удалось сохранить: '+String(error.message||error)+'. Данные сохранены на этом устройстве для повторной отправки. Не очищайте данные браузера.';
- }
+  await v2Api('POST',payload);v2Del(PENDING_KEY_V2);v2Del(SESSION_KEY_V2);
+  const node=document.getElementById('v2-save');if(node)node.textContent='✓ Результаты сохранены и появились в общей статистике.';
+ }catch(e){const node=document.getElementById('v2-save');if(node)node.textContent='Не удалось сохранить: '+String(e.message||e)+'. Не удаляйте данные браузера. Нажмите «Повторить сохранение».';
+  else alert('Не удалось отправить результаты. Откройте главную и нажмите «Повторить сохранение».')}
 }
 window.retrySave=function(){
- const pending=getPending();
- if(!pending){const st=document.getElementById('cloudStatus');if(st)st.textContent='Нет результатов, ожидающих отправки.';return}
- sendResult(pending);
+ const pending=v2Get(PENDING_KEY_V2);
+ if(!pending){alert('Несохранённых результатов нет');return}
+ v2Send(pending);
+};
+window.v2CopyConclusion=async function(){
+ const box=document.getElementById('v2-oral');
+ if(!box)return;
+ const text=box.textContent||'';
+ try{await navigator.clipboard.writeText(text);alert('Текст вывода скопирован.')}catch{window.prompt('Скопируйте текст вывода:',text)}
 };
 window.showStats=async function(){
- root.innerHTML='<section class="panel"><h2>Статистика исследования</h2><p>Загружаем сохранённые результаты…</p></section>';
+ root.innerHTML='<section class="panel"><h2>Общие результаты</h2><p>Загружаем актуальную статистику…</p></section>';
  try{
-  const response=await fetch(STUDY_API,{cache:'no-store'});
-  const data=await response.json();
-  if(!response.ok)throw new Error(data.error||'Ошибка сервера');
-  const total=data.participants;
-  const colors=data.by_color||[];
-  const rows=colors.map(c=>'<tr><td><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:'+c.hex+';margin-right:7px"></span>'+esc(c.color)+'</td><td>'+c.n+'</td><td>'+fmtNumber(c.average_wpm)+'</td><td>'+fmtNumber(c.median_wpm)+'</td><td>'+fmtNumber(c.minimum_wpm)+'</td><td>'+fmtNumber(c.maximum_wpm)+'</td><td>'+fmtNumber(c.accuracy_percent,'%')+'</td></tr>').join('');
-  const comparisons=data.paired_vs_gray||[];
-  const pairedRows=comparisons.map(c=>'<tr><td>'+esc(c.color)+'</td><td>'+c.n+'</td><td>'+fmtNumber(c.median_change_percent,'%')+'</td><td>'+c.faster_count+' / '+c.slower_count+'</td><td>'+fmtNumber(c.accuracy_change_points,' п.п.')+'</td></tr>').join('');
-  const pairedBlock='<h3>Парное сравнение с серым</h3><p class="small muted">Для каждого человека рассчитывается изменение скорости относительно его собственного результата с серым шрифтом. Показана медиана индивидуальных процентных изменений.</p><div style="overflow-x:auto"><table><thead><tr><th>Цвет</th><th>Чел.</th><th>Медиана Δ</th><th>Быстрее / медленнее</th><th>Δ понимания</th></tr></thead><tbody>'+pairedRows+'</tbody></table></div>';
-  const preliminary='<div class="warning"><strong>Предварительный вывод по фактическим данным</strong><p>'+esc(data.preliminary_conclusion||'Нет данных.')+'</p></div>';
-  const balance='<p class="small muted">'+(data.text_color_balanced?'Распределение трёх текстов по цветам сбалансировано в текущей выборке.':'В текущей выборке распределение текстов по цветам ещё не полностью сбалансировано: это ограничение интерпретации.')+'</p>';
-  const best=[...colors].filter(c=>c.average_wpm!==null).sort((a,b)=>b.average_wpm-a.average_wpm)[0];
-  root.innerHTML='<section class="panel"><h2>Статистика исследования</h2><p class="small muted">Данные объединяются по всем участникам и обновляются при каждом открытии этой страницы.</p><div class="statgrid"><div class="stat"><div class="statvalue">'+total+' / '+data.goal_participants+'</div><div class="muted small">сохранённых участников</div></div><div class="stat"><div class="statvalue">'+data.total_trials+'</div><div class="muted small">прочитанных текстов</div></div><div class="stat"><div class="statvalue">'+fmtNumber(data.overall?.average_wpm)+'</div><div class="muted small">средняя скорость, слов/мин</div></div><div class="stat"><div class="statvalue">'+fmtNumber(data.overall?.accuracy_percent,'%')+'</div><div class="muted small">правильных ответов</div></div></div><h3>Сравнение цветов</h3><div style="overflow-x:auto"><table><thead><tr><th>Цвет</th><th>Проб</th><th>Среднее</th><th>Медиана</th><th>Мин.</th><th>Макс.</th><th>Понимание</th></tr></thead><tbody>'+rows+'</tbody></table></div><p class="small muted">Скорость — слов в минуту. Минимум и максимум — самые медленные и быстрые отдельные пробы, а не характеристики людей.</p>'+(total===0?'<p class="warning">Пока ни один участник не завершил и не сохранил эксперимент.</p>':(best?'<p><strong>Наибольшая средняя скорость:</strong> '+esc(best.color)+' ('+fmtNumber(best.average_wpm)+' слов/мин).</p>':''))+pairedBlock+preliminary+balance+'<div class="warning small">Данные описательные. Для проверки статистической значимости предусмотрен критерий Фридмана по связанным измерениям; p-значение сайт не рассчитывает. Порог практически значимого отличия 10% выбран нами заранее как рабочий, а не общепринятый стандарт. Снижение точности ответов более чем на 10 процентных пунктов рассматриваем как ограничение. Участники учитываются по уникальным кодам, личность не проверяется.</div><p><button class="secondary" onclick="showStats()">Обновить показатели</button> <button onclick="setup()">На главную</button></p></section>';
- }catch(error){
-  root.innerHTML='<section class="panel"><h2>Статистика исследования</h2><p class="warning">Не удалось получить данные: '+esc(String(error.message||error))+'. Это не означает, что результатов нет.</p><p><button onclick="showStats()">Повторить</button> <button class="secondary" onclick="setup()">На главную</button></p></section>';
- }
+ const d=await v2Api('GET');
+ const cs=d.by_color||[],pairs=d.paired_vs_gray||[];
+ const max=Math.max(1,...cs.map(x=>x.average_wpm||0));
+ const bars=cs.map(c=>'<div style="margin:14px 0"><div style="display:flex;justify-content:space-between;gap:10px"><strong>'+esc(c.color)+'</strong><strong>'+v2Num(c.average_wpm)+' слов/мин</strong></div>'+
+ '<div style="background:#ecf0f5;border-radius:10px;height:18px;overflow:hidden;margin-top:6px"><div style="background:'+esc(c.hex)+';height:18px;border-radius:10px;width:'+((c.average_wpm||0)/max*100).toFixed(1)+'%"></div></div></div>').join('');
+ const rows=cs.map(c=>'<tr><td>'+esc(c.color)+'</td><td>'+v2Num(c.average_wpm)+'</td><td>'+v2Num(c.median_wpm)+'</td><td>'+v2Num(c.minimum_wpm)+'</td><td>'+v2Num(c.maximum_wpm)+'</td><td>'+v2Num(c.accuracy_percent,'%')+'</td></tr>').join('');
+ const pairRows=pairs.map(p=>'<tr><td>'+esc(p.color)+'</td><td>'+v2Num(p.median_change_percent,'%')+'</td><td>'+p.faster_count+' / '+p.slower_count+'</td><td>'+v2Num(p.accuracy_change_points,' п.п.')+'</td></tr>').join('');
+ const names=(d.completed_names||[]).map(x=>'<span class="pill">'+esc(x.name)+' <span class="muted">#'+Number(x.number)+'</span></span>').join(' ');
+ const n=d.participants;
+ const note=d.text_color_balanced?'Тексты распределены по цветам сбалансированно для этой выборки.':'При неполной выборке тексты могут распределяться по цветам неравномерно; это ограничивает интерпретацию.';
+ root.innerHTML='<section class="panel"><h2>Статистика группы</h2><p class="small muted">Отображаются только полностью завершённые и сохранённые прохождения.</p>'+
+ '<div class="statgrid"><div class="stat"><div class="statvalue">'+n+'</div><div class="muted small">участников завершили тест</div></div>'+
+ '<div class="stat"><div class="statvalue">'+d.total_trials+'</div><div class="muted small">прочитанных текстов</div></div>'+
+ '<div class="stat"><div class="statvalue">'+v2Num(d.overall?.average_wpm)+'</div><div class="muted small">общая скорость, слов/мин</div></div>'+
+ '<div class="stat"><div class="statvalue">'+v2Num(d.overall?.accuracy_percent,'%')+'</div><div class="muted small">правильных ответов</div></div></div>'+
+ '<h3>Средняя скорость по цветам</h3>'+bars+
+ '<div style="overflow-x:auto"><table><thead><tr><th>Цвет</th><th>Сред.</th><th>Медиана</th><th>Мин.</th><th>Макс.</th><th>Понимание</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+ '<h3>Парные сравнения с серым</h3><p class="small muted">На сколько процентов быстрее или медленнее каждый человек читал другим цветом по сравнению со своим собственным результатом при сером.</p>'+
+ '<div style="overflow-x:auto"><table><thead><tr><th>Цвет</th><th>Медиана Δ</th><th>Быстрее / медленнее</th><th>Δ понимания</th></tr></thead><tbody>'+pairRows+'</tbody></table></div>'+
+ '<div class="warning small">'+esc(note)+'</div>'+
+ '<h3>Готовый вывод для выступления</h3><div id="v2-oral" class="panel" style="background:#f0f6ff;box-shadow:none;border-color:#ccdef5;font-size:16px;line-height:1.7">'+esc(d.oral_conclusion||'Данные пока не собраны.')+'</div>'+
+ '<p><button onclick="v2CopyConclusion()">Скопировать текст вывода</button> <button class="secondary" onclick="showStats()">Обновить цифры</button></p>'+
+ '<details style="margin:18px 0"><summary style="cursor:pointer;font-weight:bold">Кто завершил эксперимент ('+n+')</summary><div style="margin:12px 0;line-height:2">'+(names||'Пока никого')+'</div></details>'+
+ '<div class="warning small"><strong>Научная оговорка.</strong> Это описательная статистика: она показывает наблюдаемые различия, но не доказывает влияние цвета. Значимость различий (p-значение) не рассчитывается автоматически. Для полноценного вывода нужен критерий Фридмана. Порог 10% — заранее выбранное учебное правило, не общеустановленный стандарт. Имена/псевдонимы видны на публичном сайте, не вводите личные сведения.</div>'+
+ '<p><button class="secondary" onclick="setup()">Вернуться к эксперименту</button></p></section>';
+ }catch(e){root.innerHTML='<section class="panel"><h2>Статистика группы</h2><p class="warning">Не удалось загрузить результаты: '+esc(String(e.message||e))+'. Это не означает, что участников нет.</p><button onclick="showStats()">Повторить</button> <button class="secondary" onclick="setup()">На главную</button></section>'}
 };
 setup();
 </script></body></html>
