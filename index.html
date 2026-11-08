@@ -1,6 +1,6 @@
-<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Эксперимент — цвет шрифта и скорость чтения</title><style>
+<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Результаты исследования — цвет шрифта и скорость чтения</title><style>
 :root {font-family: Arial,sans-serif;color:#1b2d45;background:#f3f6fa} *{box-sizing:border-box}
-body{margin:0} main{max-width:940px;margin:26px auto 80px;padding:0 18px}
+body{margin:0} main{max-width:1120px;margin:26px auto 80px;padding:0 18px}
 header{display:flex;align-items:center;gap:14px;margin-bottom:22px}
 mark{background:#deedff;border-radius:10px;padding:10px 13px;font-weight:bold;color:#164977}
 h1{font-size:26px;margin:0 0 5px}h2{font-size:22px}p{line-height:1.55}.muted{color:#597089}.small{font-size:13px}
@@ -130,34 +130,44 @@ window.v2CopyConclusion=async function(){
  try{await navigator.clipboard.writeText(text);alert('Текст вывода скопирован.')}catch{window.prompt('Скопируйте текст вывода:',text)}
 };
 window.showStats=async function(){
- root.innerHTML='<section class="panel"><h2>Общие результаты</h2><p>Загружаем актуальную статистику…</p></section>';
+ root.innerHTML='<section class="panel"><h2>Результаты исследования</h2><p>Загрузка данных…</p></section>';
  try{
- const d=await v2Api('GET');
- const cs=d.by_color||[],pairs=d.paired_vs_gray||[];
- const max=Math.max(1,...cs.map(x=>x.average_wpm||0));
- const bars=cs.map(c=>'<div style="margin:14px 0"><div style="display:flex;justify-content:space-between;gap:10px"><strong>'+esc(c.color)+'</strong><strong>'+v2Num(c.average_wpm)+' слов/мин</strong></div>'+
- '<div style="background:#ecf0f5;border-radius:10px;height:18px;overflow:hidden;margin-top:6px"><div style="background:'+esc(c.hex)+';height:18px;border-radius:10px;width:'+((c.average_wpm||0)/max*100).toFixed(1)+'%"></div></div></div>').join('');
- const rows=cs.map(c=>'<tr><td>'+esc(c.color)+'</td><td>'+v2Num(c.average_wpm)+'</td><td>'+v2Num(c.median_wpm)+'</td><td>'+v2Num(c.minimum_wpm)+'</td><td>'+v2Num(c.maximum_wpm)+'</td><td>'+v2Num(c.accuracy_percent,'%')+'</td></tr>').join('');
- const pairRows=pairs.map(p=>'<tr><td>'+esc(p.color)+'</td><td>'+v2Num(p.median_change_percent,'%')+'</td><td>'+p.faster_count+' / '+p.slower_count+'</td><td>'+v2Num(p.accuracy_change_points,' п.п.')+'</td></tr>').join('');
- const names=(d.completed_names||[]).map(x=>'<span class="pill">'+esc(x.name)+' <span class="muted">#'+Number(x.number)+'</span></span>').join(' ');
- const n=d.participants;
- const note=d.text_color_balanced?'Тексты распределены по цветам сбалансированно для этой выборки.':'При неполной выборке тексты могут распределяться по цветам неравномерно; это ограничивает интерпретацию.';
- root.innerHTML='<section class="panel"><h2>Статистика группы</h2><p class="small muted">Отображаются только полностью завершённые и сохранённые прохождения.</p>'+
- '<div class="statgrid"><div class="stat"><div class="statvalue">'+n+'</div><div class="muted small">участников завершили тест</div></div>'+
- '<div class="stat"><div class="statvalue">'+d.total_trials+'</div><div class="muted small">прочитанных текстов</div></div>'+
- '<div class="stat"><div class="statvalue">'+v2Num(d.overall?.average_wpm)+'</div><div class="muted small">общая скорость, слов/мин</div></div>'+
- '<div class="stat"><div class="statvalue">'+v2Num(d.overall?.accuracy_percent,'%')+'</div><div class="muted small">правильных ответов</div></div></div>'+
- '<h3>Средняя скорость по цветам</h3>'+bars+
- '<div style="overflow-x:auto"><table><thead><tr><th>Цвет</th><th>Сред.</th><th>Медиана</th><th>Мин.</th><th>Макс.</th><th>Понимание</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
- '<h3>Парные сравнения с серым</h3><p class="small muted">На сколько процентов быстрее или медленнее каждый человек читал другим цветом по сравнению со своим собственным результатом при сером.</p>'+
- '<div style="overflow-x:auto"><table><thead><tr><th>Цвет</th><th>Медиана Δ</th><th>Быстрее / медленнее</th><th>Δ понимания</th></tr></thead><tbody>'+pairRows+'</tbody></table></div>'+
- '<div class="warning small">'+esc(note)+'</div>'+
- '<h3>Готовый вывод для выступления</h3><div id="v2-oral" class="panel" style="background:#f0f6ff;box-shadow:none;border-color:#ccdef5;font-size:16px;line-height:1.7">'+esc(d.oral_conclusion||'Данные пока не собраны.')+'</div>'+
- '<p><button onclick="v2CopyConclusion()">Скопировать текст вывода</button> <button class="secondary" onclick="showStats()">Обновить цифры</button></p>'+
- '<details style="margin:18px 0"><summary style="cursor:pointer;font-weight:bold">Кто завершил эксперимент ('+n+')</summary><div style="margin:12px 0;line-height:2">'+(names||'Пока никого')+'</div></details>'+
- '<div class="warning small"><strong>Научная оговорка.</strong> Это описательная статистика: она показывает наблюдаемые различия, но не доказывает влияние цвета. Значимость различий (p-значение) не рассчитывается автоматически. Для полноценного вывода нужен критерий Фридмана. Порог 10% — заранее выбранное учебное правило, не общеустановленный стандарт. Имена/псевдонимы видны на публичном сайте, не вводите личные сведения.</div>'+
- '<p><button class="secondary" onclick="setup()">Вернуться к эксперименту</button></p></section>';
- }catch(e){root.innerHTML='<section class="panel"><h2>Статистика группы</h2><p class="warning">Не удалось загрузить результаты: '+esc(String(e.message||e))+'. Это не означает, что участников нет.</p><button onclick="showStats()">Повторить</button> <button class="secondary" onclick="setup()">На главную</button></section>'}
+  const d=await v2Api('GET');
+  const cs=d.by_color||[],pairs=d.paired_vs_gray||[],n=d.participants||0;
+  const max=Math.max(1,...cs.map(c=>c.average_wpm||0));
+  const bars=cs.map(c=>'<div style="margin:14px 0"><div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline"><strong>'+esc(c.color)+'</strong><strong>'+v2Num(c.average_wpm)+' слов/мин</strong></div>'+
+   '<div style="background:#e9eef5;border-radius:9px;height:16px;overflow:hidden;margin-top:6px"><div style="background:'+esc(c.hex)+';height:16px;border-radius:9px;width:'+((c.average_wpm||0)/max*100).toFixed(1)+'%"></div></div></div>').join('');
+  const rows=cs.map(c=>'<tr><td>'+esc(c.color)+'</td><td>'+v2Num(c.average_wpm)+'</td><td>'+v2Num(c.median_wpm)+'</td><td>'+v2Num(c.minimum_wpm)+'</td><td>'+v2Num(c.maximum_wpm)+'</td><td>'+v2Num(c.accuracy_percent,'%')+'</td></tr>').join('');
+  const pairRows=pairs.map(p=>'<tr><td>'+esc(p.color)+'</td><td>'+v2Num(p.median_change_percent,'%')+'</td><td>'+p.faster_count+' / '+p.slower_count+'</td><td>'+v2Num(p.accuracy_change_points,' п.п.')+'</td></tr>').join('');
+  const fr=d.friedman||{available:false};
+  const pformat=x=>x<0.001?'p < 0,001':'p = '+Number(x).toLocaleString('ru-RU',{minimumFractionDigits:3,maximumFractionDigits:3});
+  const stat=fr.available?
+    '<div class="statgrid"><div class="stat"><div class="statvalue">'+v2Num(fr.statistic)+'</div><div class="muted small">χ² Фридмана</div></div>'+
+    '<div class="stat"><div class="statvalue">'+pformat(fr.p_value)+'</div><div class="muted small">статистическая значимость</div></div></div>'+
+    '<p class="small muted">W Кендалла = '+v2Num(fr.kendalls_w)+' · '+esc(fr.method)+'. Уровень значимости α = 0,05.</p>':
+    '<p class="muted">Статистическая проверка появится после завершения минимум трёх экспериментов.</p>';
+  const names=(d.completed_names||[]).map(x=>'<span class="pill">'+esc(x.name)+' <span class="muted">№ '+Number(x.number)+'</span></span>').join(' ');
+  const balance=n>0&&!d.text_color_balanced?'<p class="small muted">Распределение текстов по цветам среди завершивших участников ещё не сбалансировано.</p>':'';
+  const conclusion='<h3>Интерпретация результатов</h3><p style="font-size:16px;line-height:1.65">'+esc(d.interpretation||'Данных пока нет.')+'</p>';
+  root.innerHTML='<section class="panel"><h2>Результаты исследования</h2><p class="muted">Влияние цвета шрифта на скорость чтения с экрана</p>'+
+  '<div class="statgrid"><div class="stat"><div class="statvalue">'+n+'</div><div class="muted small">участников</div></div>'+
+  '<div class="stat"><div class="statvalue">'+d.total_trials+'</div><div class="muted small">измерений</div></div>'+
+  '<div class="stat"><div class="statvalue">'+v2Num(d.overall?.average_wpm)+'</div><div class="muted small">средняя скорость, слов/мин</div></div>'+
+  '<div class="stat"><div class="statvalue">'+v2Num(d.overall?.accuracy_percent,'%')+'</div><div class="muted small">правильных ответов</div></div></div>'+
+  '<h3>Скорость чтения по цветам</h3>'+bars+
+  '<div style="overflow-x:auto"><table><thead><tr><th>Цвет</th><th>Среднее</th><th>Медиана</th><th>Мин.</th><th>Макс.</th><th>Понимание</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+  '<h3>Изменение скорости относительно серого</h3>'+
+  '<p class="small muted">Медианное изменение скорости одного участника; положительное значение означает ускорение относительно его результата на сером.</p>'+
+  '<div style="overflow-x:auto"><table><thead><tr><th>Цвет</th><th>Изменение</th><th>Быстрее / медленнее</th><th>Понимание, Δ</th></tr></thead><tbody>'+pairRows+'</tbody></table></div>'+
+  '<h3>Критерий Фридмана</h3>'+stat+conclusion+balance+
+  '<p class="small muted">Промежуточные значения при наборе выборки предназначены для контроля хода исследования. Окончательные выводы делают после завершения сбора данных. Статистически значимое общее различие не указывает, какие именно два цвета различаются.</p>'+
+  '<details style="margin:18px 0"><summary style="cursor:pointer">Участники, завершившие эксперимент ('+n+')</summary><div style="margin:12px 0;line-height:2">'+(names||'Пока нет')+'</div></details>'+
+  '<details style="margin:16px 0"><summary style="cursor:pointer">Методика и ограничения</summary><p class="small muted">Каждый участник читает три текста при разных цветах шрифта. Результат — число слов в минуту; после каждого текста проверяется понимание. Статистический анализ: критерий Фридмана для трёх связанных измерений с перестановочным расчётом p-значения. Неодинаковые устройства, освещение и незавершённые прохождения ограничивают интерпретацию. Промежуточные результаты не предназначены для окончательного подтверждения гипотезы.</p></details>'+
+  '<p><button class="secondary" onclick="showStats()">Обновить данные</button> <button class="secondary" onclick="setup()">К эксперименту</button></p></section>';
+ }catch(e){
+  root.innerHTML='<section class="panel"><h2>Результаты исследования</h2><p class="warning">Не удалось загрузить данные. '+esc(String(e.message||e))+'</p><button onclick="showStats()">Повторить</button> <button class="secondary" onclick="setup()">К эксперименту</button></section>';
+ }
 };
+
 setup();
 </script></body></html>
