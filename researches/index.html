@@ -110,6 +110,9 @@
           <tbody id="statistics-age"></tbody>
         </table>
         <button id="statistics-download" type="button">Выгрузить результаты (CSV)</button>
+        <h3>Тестовая выборка (синтетические данные)</h3>
+        <p id="synthetic-summary" role="status">Тестовая статистика не загружена.</p>
+        <table><thead><tr><th>Возраст, лет</th><th>Количество тестовых анкет</th></tr></thead><tbody id="synthetic-ages"></tbody></table>
         <button id="synthetic-download" type="button">Выгрузить все тестовые ответы (CSV)</button>
         <p id="synthetic-status" role="status"></p>
       </div>
@@ -332,6 +335,23 @@
         renderStatisticsRows(get('statistics-age'), statistics.ages);
         statisticsStatus.textContent = statistics.total ? '' : 'Завершённых анкет пока нет.';
         statisticsResults.hidden = false;
+        try {
+          const testResponse = await fetch(new URL('./rpc/coursework_synthetic_export', endpoint), {
+            method:'POST', headers:{apikey:publishableKey,'Content-Type':'application/json'},
+            body:JSON.stringify({access_code:statisticsCode}), signal:AbortSignal.timeout(15000)
+          });
+          if (!testResponse.ok) throw new Error('Test statistics failed');
+          const testRows = await testResponse.json();
+          if (!Array.isArray(testRows) || testRows.some(r=>r.is_test!==true)) throw new Error('Invalid test data');
+          const female=testRows.filter(r=>r.gender==='female').length;
+          const male=testRows.filter(r=>r.gender==='male').length;
+          get('synthetic-summary').textContent='Тестовых анкет: '+testRows.length+'; женщин: '+female+'; мужчин: '+male+'. Не включены в реальные результаты.';
+          const ages=new Map();
+          for (const r of testRows) ages.set(r.age,(ages.get(r.age)||0)+1);
+          renderStatisticsRows(get('synthetic-ages'),Array.from(ages).sort((a,b)=>a[0]-b[0]));
+        } catch {
+          get('synthetic-summary').textContent='Не удалось загрузить тестовую статистику.';
+        }
       } catch {
         statisticsStatus.textContent = 'Не удалось загрузить статистику. Закройте панель и откройте её снова.';
       } finally {
