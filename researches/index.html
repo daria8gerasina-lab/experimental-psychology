@@ -38,6 +38,12 @@
     button:disabled{opacity:.55;cursor:wait}
     :focus-visible{outline:3px solid #326798;outline-offset:3px}
     progress{accent-color:#21654f;width:100%;height:12px;margin:0 0 20px}
+    .statistics-actions{margin-top:16px}
+    #statistics{margin-top:12px}
+    #statistics table{width:100%;border-collapse:collapse;margin-bottom:16px}
+    #statistics caption{text-align:left;font-weight:650}
+    #statistics th,#statistics td{text-align:left;border-bottom:1px solid #dfebe2;padding:6px 0}
+    #statistics th:last-child,#statistics td:last-child{text-align:right}
     #error{color:#9e2727;font-weight:650}
   </style>
 </head>
@@ -84,6 +90,27 @@
     <section id="success" class="card" hidden>
       <h2 tabindex="-1">Спасибо за участие!</h2>
       <p>Ваши ответы получены. Можно закрыть страницу.</p>
+    </section>
+    <div class="statistics-actions">
+      <button id="statistics-toggle" class="back" type="button" aria-controls="statistics" aria-expanded="false">Статистика исследования</button>
+    </div>
+    <section id="statistics" class="card" hidden>
+      <h2>Статистика исследования</h2>
+      <p id="statistics-status" role="status"></p>
+      <div id="statistics-results" hidden>
+        <p>Завершённых анкет: <strong id="statistics-total"></strong></p>
+        <table>
+          <caption>Пол участников</caption>
+          <thead><tr><th scope="col">Пол</th><th scope="col">Количество</th></tr></thead>
+          <tbody id="statistics-gender"></tbody>
+        </table>
+        <table>
+          <caption>Возраст участников</caption>
+          <thead><tr><th scope="col">Возраст, полных лет</th><th scope="col">Количество</th></tr></thead>
+          <tbody id="statistics-age"></tbody>
+        </table>
+        <button id="statistics-download" type="button">Выгрузить результаты (CSV)</button>
+      </div>
     </section>
   </main>
   <footer id="credits" hidden>
@@ -245,6 +272,94 @@
         next.disabled = false;
       }
     });
+
+    const statisticsToggle = get('statistics-toggle');
+    const statisticsPanel = get('statistics');
+    const statisticsStatus = get('statistics-status');
+    const statisticsResults = get('statistics-results');
+    const statisticsCode = /^#stats=([A-Za-z0-9_-]{43})$/.exec(location.hash)?.[1];
+    const genderLabels = Array.from(get('gender').options)
+      .filter(option => option.value)
+      .map(option => [option.value, option.textContent]);
+    let statistics;
+
+    function renderStatisticsRows(tbody, rows) {
+      tbody.replaceChildren(...rows.map(([label, count]) => {
+        const row = document.createElement('tr');
+        row.insertCell().textContent = label;
+        row.insertCell().textContent = count;
+        return row;
+      }));
+    }
+
+    statisticsToggle.addEventListener('click', async () => {
+      const opening = statisticsPanel.hidden;
+      statisticsPanel.hidden = !opening;
+      statisticsToggle.setAttribute('aria-expanded', String(opening));
+      if (!opening) return;
+
+      statistics = null;
+      statisticsResults.hidden = true;
+      if (!statisticsCode) {
+        statisticsStatus.textContent = 'Для просмотра откройте ссылку на статистику, которую вам прислал организатор исследования.';
+        return;
+      }
+
+      statisticsToggle.disabled = true;
+      statisticsStatus.textContent = 'Загружаем статистику…';
+      try {
+        const response = await fetch(new URL('./rpc/coursework_demographic_summary', endpoint), {
+          method: 'POST',
+          headers: { apikey: publishableKey, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ access_code: statisticsCode }),
+          signal: AbortSignal.timeout(15000)
+        });
+        if (response.status === 401 || response.status === 403) {
+          statisticsStatus.textContent = 'Ссылка на статистику недействительна.';
+          return;
+        }
+        if (!response.ok) throw new Error('Statistics request failed');
+        const result = await response.json();
+        statistics = {
+          total: result.total,
+          gender: genderLabels.map(([key, label]) => [label, result.gender[key]]),
+          ages: result.ages.map(({ age, count }) => [age, count])
+        };
+        get('statistics-total').textContent = statistics.total;
+        renderStatisticsRows(get('statistics-gender'), statistics.gender);
+        renderStatisticsRows(get('statistics-age'), statistics.ages);
+        statisticsStatus.textContent = statistics.total ? '' : 'Завершённых анкет пока нет.';
+        statisticsResults.hidden = false;
+      } catch {
+        statisticsStatus.textContent = 'Не удалось загрузить статистику. Закройте панель и откройте её снова.';
+      } finally {
+        statisticsToggle.disabled = false;
+      }
+    });
+
+    get('statistics-download').addEventListener('click', () => {
+      if (!statistics) return;
+      const rows = [
+        ['Раздел', 'Значение', 'Количество'],
+        ['Всего', 'Завершённые анкеты', statistics.total],
+        ...statistics.gender.map(([label, count]) => ['Пол', label, count]),
+        ...statistics.ages.map(([age, count]) => ['Возраст', age, count])
+      ];
+      const csv = rows.map(row => row.join(';')).join('\r\n') + '\r\n';
+      const url = URL.createObjectURL(new Blob(['\uFEFF', csv], { type: 'text/csv;charset=utf-8' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'survey-statistics.csv';
+      document.body.append(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    });
+
+    if (statisticsCode) {
+      get('invite-note').textContent = 'Откройте статистику исследования, чтобы посмотреть и выгрузить сводку.';
+      get('invite').querySelector('h2').textContent = 'Сводка для преподавателя';
+    }
 
     openInvitation().catch(() => {
       get('invite-note').textContent = 'Не удалось открыть опрос. Проверьте, что ссылка из приглашения скопирована полностью.';
