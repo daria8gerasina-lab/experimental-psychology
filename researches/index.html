@@ -95,17 +95,17 @@
       <button id="statistics-toggle" class="back" type="button" aria-controls="statistics" aria-expanded="false">Статистика исследования</button>
     </div>
     <section id="statistics" class="card" hidden>
-      <h2>Статистика исследования</h2>
+      <h2>Статистика моделируемой выборки</h2>
       <p id="statistics-status" role="status"></p>
       <div id="statistics-results" hidden>
-        <p>Завершённых анкет: <strong id="statistics-total"></strong></p>
+        <p>Анкет в моделируемой выборке: <strong id="statistics-total"></strong></p>
         <table>
-          <caption>Пол участников</caption>
+          <caption>Пол в моделируемой выборке</caption>
           <thead><tr><th scope="col">Пол</th><th scope="col">Количество</th></tr></thead>
           <tbody id="statistics-gender"></tbody>
         </table>
         <table>
-          <caption>Возраст участников</caption>
+          <caption>Возраст в моделируемой выборке</caption>
           <thead><tr><th scope="col">Возраст, полных лет</th><th scope="col">Количество</th></tr></thead>
           <tbody id="statistics-age"></tbody>
         </table>
@@ -308,7 +308,7 @@
       statisticsToggle.disabled = true;
       statisticsStatus.textContent = 'Загружаем статистику…';
       try {
-        const response = await fetch(new URL('./rpc/coursework_demographic_summary', endpoint), {
+        const response = await fetch(new URL('./rpc/coursework_mixed_demographic_summary', endpoint), {
           method: 'POST',
           headers: { apikey: publishableKey, 'Content-Type': 'application/json' },
           body: JSON.stringify({ access_code: statisticsCode }),
@@ -322,13 +322,15 @@
         const result = await response.json();
         statistics = {
           total: result.total,
+          realCount: result.real_count,
+          syntheticCount: result.synthetic_count,
           gender: genderLabels.map(([key, label]) => [label, result.gender[key]]),
           ages: result.ages.map(({ age, count }) => [age, count])
         };
         get('statistics-total').textContent = statistics.total;
         renderStatisticsRows(get('statistics-gender'), statistics.gender);
         renderStatisticsRows(get('statistics-age'), statistics.ages);
-        statisticsStatus.textContent = statistics.total ? '' : 'Завершённых анкет пока нет.';
+        statisticsStatus.textContent = statistics.total ? `Реальные анкеты: ${statistics.realCount}; синтетические: ${statistics.syntheticCount}.` : 'Анкет пока нет.';
         statisticsResults.hidden = false;
       } catch {
         statisticsStatus.textContent = 'Не удалось загрузить статистику. Закройте панель и откройте её снова.';
@@ -341,7 +343,9 @@
       if (!statistics) return;
       const rows = [
         ['Раздел', 'Значение', 'Количество'],
-        ['Всего', 'Завершённые анкеты', statistics.total],
+        ['Всего', 'Моделируемая выборка', statistics.total],
+        ['Происхождение', 'Реальные', statistics.realCount],
+        ['Происхождение', 'Синтетические', statistics.syntheticCount],
         ...statistics.gender.map(([label, count]) => ['Пол', label, count]),
         ...statistics.ages.map(([age, count]) => ['Возраст', age, count])
       ];
@@ -349,7 +353,7 @@
       const url = URL.createObjectURL(new Blob(['\uFEFF', csv], { type: 'text/csv;charset=utf-8' }));
       const link = document.createElement('a');
       link.href = url;
-      link.download = 'survey-statistics.csv';
+      link.download = 'mixed-simulated-statistics.csv';
       document.body.append(link);
       link.click();
       link.remove();
@@ -358,7 +362,7 @@
 
     if (statisticsCode) {
       get('invite-note').textContent = 'Откройте статистику исследования, чтобы посмотреть и выгрузить сводку.';
-      get('invite').querySelector('h2').textContent = 'Сводка для преподавателя';
+      get('invite').querySelector('h2').textContent = 'Сводка моделируемой выборки';
     }
 
     openInvitation().catch(() => {
