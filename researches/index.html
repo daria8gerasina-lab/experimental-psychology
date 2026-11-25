@@ -110,6 +110,8 @@
           <tbody id="statistics-age"></tbody>
         </table>
         <button id="statistics-download" type="button">Выгрузить результаты (CSV)</button>
+        <button id="synthetic-download" type="button">Выгрузить все тестовые ответы (CSV)</button>
+        <p id="synthetic-status" role="status"></p>
       </div>
     </section>
   </main>
@@ -354,6 +356,42 @@
       link.click();
       link.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    });
+
+    get('synthetic-download').addEventListener('click', async () => {
+      const button = get('synthetic-download');
+      const status = get('synthetic-status');
+      button.disabled = true;
+      status.textContent = 'Загружаем тестовые анкеты…';
+      try {
+        const response = await fetch(new URL('./rpc/coursework_synthetic_export', endpoint), {
+          method: 'POST',
+          headers: { apikey: publishableKey, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ access_code: statisticsCode }),
+          signal: AbortSignal.timeout(15000)
+        });
+        if (!response.ok) throw new Error('Export failed');
+        const records = await response.json();
+        if (!Array.isArray(records) || records.some(r => r.is_test !== true || r.bfi.length !== 60 || r.shkuratova.length !== 56)) throw new Error('Invalid export');
+        const columns = ['id','age','gender','is_test',
+          ...Array.from({length:60},(_,i)=>'BFI_'+String(i+1).padStart(2,'0')),
+          ...Array.from({length:56},(_,i)=>'SHK_'+String(i+1).padStart(2,'0'))];
+        const rows = [columns, ...records.map(r=>[r.id,r.age,r.gender,r.is_test,...r.bfi,...r.shkuratova])];
+        const csv = rows.map(row=>row.join(';')).join('\r\n')+'\r\n';
+        const url = URL.createObjectURL(new Blob(['\uFEFF',csv],{type:'text/csv;charset=utf-8'}));
+        const link = document.createElement('a');
+        link.href=url;
+        link.download='synthetic-test-responses.csv';
+        document.body.append(link);
+        link.click();
+        link.remove();
+        setTimeout(()=>URL.revokeObjectURL(url),1000);
+        status.textContent = 'Тестовых анкет выгружено: '+records.length;
+      } catch {
+        status.textContent = 'Не удалось выгрузить тестовые анкеты. Повторите попытку.';
+      } finally {
+        button.disabled = false;
+      }
     });
 
     if (statisticsCode) {
