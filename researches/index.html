@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <title>Опрос о личности и общении</title>
+  <style>
+    :root{font:16px/1.5 system-ui,sans-serif;color:#142d2a;background:#f3f5ef;color-scheme:light}
+    *{box-sizing:border-box}
+    body{margin:0}
+    main,footer{max-width:740px;margin:auto;padding-inline:20px}
+    main{padding-block:clamp(28px,7vw,76px) 24px}
+    h1{font-size:clamp(2rem,6vw,3rem);line-height:1.04;margin:0 0 18px;letter-spacing:-.04em}
+    h2{margin:0 0 10px;font-size:1.45rem}
+    p{margin:0 0 14px}
+    .kicker{color:#315d52;font-weight:650;margin-bottom:12px}
+    .card{padding:clamp(18px,4vw,36px);background:#fff;border:1px solid #d5e0d6;border-radius:20px}
+    .muted,footer{color:#455c55}
+    footer{font-size:.875rem;padding-bottom:30px}
+    [hidden]{display:none!important}
+    a{color:#245b4e}
+    label{cursor:pointer}
+    .field{display:grid;gap:6px;margin-block:16px;max-width:360px;font-weight:650}
+    input[type=number],select{font:inherit;border:1px solid #7d988a;border-radius:8px;padding:8px;background:#fff;color:inherit;width:100%}
+    input[type=radio],input[type=checkbox]{accent-color:#21654f;width:1.2rem;height:1.2rem;margin:0;flex:none}
+    .consent,.choice{display:flex;align-items:center;gap:10px}
+    .consent{margin:22px 0}
+    .choice{padding:8px 10px;border:1px solid #dfebe2;border-radius:8px;margin-top:5px;min-height:44px}
+    .choice:has(:checked){background:#e2f2e7;border-color:#519477}
+    .choice:hover{border-color:#519477}
+    fieldset{margin:0 0 20px;padding:6px 0 0;min-width:0;border:0}
+    legend{padding:0;font-weight:650}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+    button{font:inherit;font-weight:650;border:1px solid #18523f;border-radius:9px;background:#18523f;color:#fff;padding:10px 20px;min-height:44px;cursor:pointer}
+    .back{background:#fff;color:#18523f}
+    button:disabled{opacity:.55;cursor:wait}
+    :focus-visible{outline:3px solid #326798;outline-offset:3px}
+    progress{accent-color:#21654f;width:100%;height:12px;margin:0 0 20px}
+    #error{color:#9e2727;font-weight:650}
+  </style>
+</head>
+<body>
+  <main>
+    <p class="kicker">Учебное исследование · РУДН</p>
+    <h1>Опрос о личности и общении</h1>
+    <div id="invite" class="card">
+      <h2>Вход в опрос</h2>
+      <p id="invite-note">Откройте полную ссылку, которую вам прислал организатор исследования.</p>
+    </div>
+    <form id="survey" class="card" hidden>
+      <section id="intro">
+        <h2>Перед началом</h2>
+        <p>Мы изучаем связь черт личности с тем, как люди ведут себя в общении. Опрос состоит из двух частей и предназначен для участников от 18 лет.</p>
+        <p>Участие добровольное. До отправки вы можете выйти, закрыв страницу. В исследовательскую выборку входят возраст, пол и ответы. Форма не запрашивает имя и контакты. Результаты будут представлены в обобщённом виде.</p>
+        <label class="field">Возраст (полных лет)
+          <input id="age" type="number" min="18" max="120" step="1" inputmode="numeric" required>
+        </label>
+        <label class="field">Пол
+          <select id="gender" required>
+            <option value="">Выберите вариант</option>
+            <option value="female">Женский</option>
+            <option value="male">Мужской</option>
+            <option value="other">Другой вариант</option>
+            <option value="undisclosed">Предпочитаю не указывать</option>
+          </select>
+        </label>
+        <label class="consent"><input id="consent" type="checkbox" required> Мне исполнилось 18 лет, и я добровольно соглашаюсь участвовать в исследовании.</label>
+      </section>
+      <section id="questions" hidden>
+        <p id="progress-label" class="muted"></p>
+        <progress id="progress" max="116" aria-labelledby="progress-label"></progress>
+        <h2 id="section-title" tabindex="-1"></h2>
+        <p id="instructions" class="muted"></p>
+        <div id="items"></div>
+      </section>
+      <p id="error" role="alert" hidden></p>
+      <div class="actions">
+        <button id="back" class="back" type="button" hidden>Назад</button>
+        <button id="next" type="submit">Начать опрос</button>
+      </div>
+    </form>
+    <section id="success" class="card" hidden>
+      <h2 tabindex="-1">Спасибо за участие!</h2>
+      <p>Ваши ответы получены. Можно закрыть страницу.</p>
+    </section>
+  </main>
+  <footer id="credits" hidden>
+    <p>BFI‑2 © 2015 Оливер П. Джон и Кристофер Дж. Сото. Русский перевод — С. А. Щебетенко, А. Ю. Калугин, А. М. Мишкевич, К. Дж. Сото и О. П. Джон. <a href="https://www.colby.edu/wp-content/uploads/2018/08/bfi2-form-russian.pdf">Бланк и сведения об авторах</a>.</p>
+    <p>Опросник «Стратегии самопредъявления» — И. П. Шкуратова. <a href="https://irshkuratova.ru/researches.html">Публикации автора</a>.</p>
+  </footer>
+  <script>
+    'use strict';
+    const endpoint = 'https://yhuhmswdtebyhdtrikse.supabase.co/rest/v1/coursework_responses';
+    const publishableKey = 'sb_publishable_G_Q7UYxtA2cd1iaHtvhd9Q_Va_aF74Z';
+    const encryptedItems = 'j0jvplFYRpopAm6E-rz-Li5gcEv1SYUse-O_R1xIW7kPw-459hs8ocvSzyfmAeHJD1wu8Kblu0If_BS-FH9r70__kFBzwbBzgPRR6g9rCPRvhRNukFBuAmT3ZQ4jJ8JbxOH6I9vM1YQK9x1nB0YcIQH06Qi7GWoal36MkYnpfm3AqE102SebMn4TVBLlOlADyQQ56oqzwf1tzGpUZCj_NpVdvhdggz1UTLc2OSBuoJP2aLIhLZErRgUI7gRfYhSXiRqFNFvAyKcraJMcCTjt1pn6wKG12fuI7uMpg_RrlyxUmZ9R0HF-cvLbiRUWNvyxS5nAvU3YGiyDMilZO5vvlUuUNn0Ag-ufeV1N4AWswOXQ5tKPdFv1p2SyzhLG9deo-XhKgY2DtntRubqMIBLGf2ZuBFR8EkxVxtwqz4c2HcJUhNSNXXHf5EWA7ay_BBgR_hSSO5yAMSZLIY_-D1tUBPMbZatEuToFqwCAeRKj36A6PvLnJA6P_3PdzyMsPbyIydbhrshSQggmHfZ1p2FvXoGu_GsnVttH4UvmPqV7jk72Kw4Dxr77YiEuJit220j4pLLRlOkq0fD2EXVb4jgyyOLy-_Bl7eWOhsZPHR7Q9N8jW_OJztRW-9IG8TSDCU9mmOAxeHdL5T0iQSydq1FS_nWziTEBJIVyXJkuDZlok8pRR56Pfq0RbaPhvLmhWn581MfcYExkMGscuTTqnBHmvuNsqhrwZnEEcDbqiDMc2K5ilRTZr9IZ8GGfd4yf4_anoyhq3e7_QT9048To_H8gsbjTF1qnOGhqb1yw2_JyU6ea5QXyQoOhbW03pYy0YaFBBkvckxxmfE_VFkk-2XW7ci8oWuFtkkNGYEYiyvIipSJVmND31TQ2qcYTqXPi3fARKEbJJSR4DtnvUtBIvNXv92sBvuDvznSOJR06VQr92_R5jFcIK3mK9moN3NYD6HWLzYlbf4esaV7HK8945xlvZEUtDzZS2G75eJdIpCLVSJyi3nCfLA06D6SOEidAupSyV-eUj0vxxtGTeFv1VtCQwfwLSrZuaLMqhD5jRaTiFZDDISRzPe3GsLGuGZOuAnzn6JFBpFAMeow83VFOPa_7H_UohR2G5kQqyI4mn-jLvv-9MQpO96Wupyx6fNSddK59Zu-CY2AfVCAlGS6mnPWp8N622U7-xnZkkZNQYiN5L3dq-KkcyRAdDTcjedMY_C5c5pu9jQqrYk7nl6aJYkHafo0X2CBCtEcp_s1zaDEpQpEoXZ5y4V8_LDPKQbUuAhXAJXXAlszAfCmyRB06EpsoCN6AzB-jJJ_cIBmsnA81JVYQK3XZEPDaeI1ciDio0e8_H3pPfto8ceBTbnkjyiTo6d5KRn950T4M0PdUG8Zn7KQu01KjI5Yc6RUsSkZIRlMWBiOQJojsmKIh7rJ72NYm_y3pg4Vi-zY4WflthEjt4svGTC09gXzf_SAJOcFRkQa-FxZKVOhd33Y7eDp3Z38TBpOV8cj5ZNWRKo2u6s1QwMghSvSGnn74COnC-u8ZW6bc5fFfwBavjYA-Oxyh9_wKQwiqRFe8q_STCr5pdOIu8QJY7eK84SpswsOmixI7bKlUSpZtIkWAcpT7SF9sFtbdIp1Ibcs3ILbxtNi3buF0IiiKGLuIkFySwmlXkzccApg-0tXf6weH282J_k8pBV3mRMbXD7Z_LgWyuL_akw3zEMxWfPgw_FRTjQSTgJ-BvtFMAKcl1vO8x2qTCMnTE0wVxt069WZlpm-1VTganpEZKw6ndZBT2I6WtmzEiAXcaO40csDf-xPbBXEVosM69-tudxhEIEs9VAtguOViMqNzaPT6StHqMpIicWNoUeU44yPMcMpyf5GQFwR7wfvy-1KaHoYTvZCpHj6FzlTEGIXIazSSdCpdy0j87O5CCf2c_XpBYTDNciiEBrSUBEFwuqmNYIJScNu7MqId4rCkUTx1eJ8woqvUVJsWcUtisJ0E7n-pDL6YfFwy-Pslq06_9IeOV1Pf6RzER2wzmNi71S_3RNn769vZhnUav56Eif_15_CYbMIZ20-ICyyhJ_Ba3ZVxOQI-e7dN1XBQU4V7i_XHZPooE42PcMFZ5tB7FbbydyfjhXIIR_5nNVgqWGhP4wg1fIDFQkEkjetMS5w2TRol9ryg3__WP1wZGahEBGzNLiDOVwAuKpYJCBw0jh1N7cCHoMb7gMbgnT9QH1_C615wmidv62JxXEP7tkxzBEFxGZz3mR9lhyQYnB6_47m9_GlKRV6DlOdyBvbrh_3xeVd-4oEYMIC19rhbC7_IoOc2uNrVZoEBANkc40aJ03j05d5Dn3p9WbLdo7t1dQ0xpT-915XVI8n54hgHJxS7rENz65q2eTi0oKpqHePsEpk1yACoY7Y3R9NPkGs0NdNrzyweaxztncL55BmnlL_YrljpCDX6xQ-_2NyLeWg7AyaZGX1DNGu9-ADSewbUl4j6gNteeJtw2PBgzLz1c7LDqIsk9s4P1GKZJOznjYpCe3TsJGYTCU-kfAl-vX62dNI-c89etiJ2MZh5lA-6MYlvHdyKLFO7KxlEUaZA2oemH_fX61X7xYrNarWF0QCGz5_TPf84NEQAuu9JgcT2lIowHGipyc2olAVHSUxZ9bUqzE_MrNwxDiopNatVA447QPk9fsaCNcg4LCHUT8Uxc5aE2x8G0zHRQKkyctCt-kYNi2RF0oJzbrdJ3RnxaMVx8gF_Wj8S2UYGcoSmk4XMFuc8rjdpoCZgzbypfw2DA3fl9M3MrmtlfqAWIWUITuA7cZWoxlymH8B7UKSys_MXi7fiDMzRTGPhm0U5kQFi_hqrHSSROm-QEqSHG6SuI__CzE-D7P96CgTdeX1jfTbIfqoSAIzGY4q70C5C7ghi_0Yzu0olFQN6A0UyZD__znBYJBuHBV9uoA-H0HJLKmXz_tZmR0JfdGJe4Ga_qgUcY42n2Adi-bH5InID3jlPROI72RebK9nXQP8qcvFAfO7_Okb3NLVcTToTOJ_cPNc8whavVghuVjTTu_ghRj4ET58lt0M1cGuNqveTnk2xXOx7Qxd6bthqa7oljeVXaGZPKrZ3ri4GsLkY6_VXPRTkhK5-Ed17yW4y9051etGTpfUYhOpzqlixxRimL3yIIJ6EMc3XrvMzn2qhMoRSAhVmRvetNoLOCwK8O9cRyoD8GD-9ZR1hx90XfiPH2bBKVp5f_KFZZMcr4AR_XtBy7-LXkPOLVE2miMGZ7dWqu7VP9cbsc6QqFX1W344xTWb6RXoPI5ixUmeJefv_C7vC5W7-sYD84vOYSBV-2us2c-3dbxradESuwVIQhqdgdTAnHHuw3NI0XE-fMwULI0AMwvY4GC4efvjXLvFwcBFNtizW14gReLPpdKnt6XLrl1rH7z3eNafvUNtnIdRnwzzNXoGoxSRKOCTwlhKBboCYxI6RGxL0e3oRmxOJIYCV0fIQQkp60zfPoIOCvfkxT6PDXCUhf_VG7dbr0Az-E70St5QNu-kd9xU4Q2CTg6uhZvkKTe6A61Luf-DPamp7Z7savpyD-l00yymcOR2vZKjNh-qBjq7saBVmTgD1VVeRWkvXoV7UiSrV7XMPw-qipT-MpDbl4MdTqmpWzbzgbujARHFW1LhvTqzf-EBxMoLIYQOaAisIC9uf55-aI9omD9LMn7kXtkchTU092YMWzBGy4odiVTrYEa61c_0l_0zMB26TCBpTgdNZb6pC4F8ucv7--JhmtildZ7wiyRQJyPA2Y8n-LgXNLGkTk2IBcx07xtzXqogKf2_YZCnLUgFOkpVdf3jbFmdTD2Iubv_4NnG0hWcX_Ha2A5ry62Vfv8PurEIwhicXRonxnlMaxfJOlTuLJvLZG8sbL-3qovle7VYTbscikKS4T-mlSV691h_u9ERoWznklMXDrw2gO2RMwkreXZz53rXF4BGwM8LhRsm9VEJKsHMVrQi71ZckMqct-OQ6R7lk9HMmHcersZjm1XialzTl5hUb3QuML8o0NcjGBrqaaFJkldzqsI_gCvPEEL_NttK3RN1EcW2et9WE3aLWk55_b4714cTUu6y-_B-gZ3jSU1-9hlT4IqUsyHV_-wXtkn1nt48c854nF1SK0k4r9Ggg5TIlt3Ehap8sncANCuaqr_JibclV5I7zOCGAaHExukGscODXGEjHXyxmAEHzGiSXE_Ikn7M7FS0ZouHj_eel8SG5X7Kruu-Qv9BWxEhCy08S2cLEfu5hbqPPPNj2zBoKlxQwr8P3wDY3oTb9_9S1JQoQokBCyXO3b1dHQqEKqsQ4htSA-i4Nf8VdOc49gy4VR1ZZSjF9lJqYtiVl14vBdNlmoCfDZjDXLxS2h6hXwcJ38aCeIUkJSPfl7DswDQDPABzJiYllHLdldAg9f0FU6pfTZX2UQzSBKO4C2hApBjloR01cV3ZpDvKWAC6-CCeddsYA6hCO8BxpZmME4GzF-NsbBVqvDkqfa3ZvyqW_17F5OpyvpVPfgAcr9xxunQVhGJG2GA3JX7dDFMZY3Yv7AQfgDbuX7ScXq-X4wgjWf7tUrJ6jC_sPNlqXNz7aRVRF9_fOsc6zOkiqXxc-gAN8TCXtlJR-FezU10iCe8QM-KF6Io_pCcCOhBsKi-v6nx8B2khm7PUrCeKol1u9cKfHk_fgqnY_2cAVqN3pAJ4JFhzrr0BOvEE-7-slIO5m_SOui3DtM4QiIWcLlQcD6u0dNCFjkVJjGUSBzsdWdBBtz0v1xwK935TAEa2_Lm3xQ1PT7F6p0uoR7TOr5HVjLeQ1DakA7Uh4GU4Q99bwsvNI94rLSYaHuhFh_qC7vkYZTh-6mmNt30-chouDOb7pLx3QciSJXazMTFMBaoCjQlEnNbJkBh4XiEma5mxoy0nqIwAcC1YvUnt4PkfLDRdFQYhEUPacs7csePqZ1y2wC6rEn2hwraJB8KKAlMD3hD0o1a09weI-_S9JuRUUr5f-PBvV2ssVBgd1_Q-hpWkiRfmtru2E7qrLRbRn4OJUM89bgJ5XLj8R0W10kYpUXJSbbP9yFW7MADGMyj9y6JMk70oE-owQiFa09iCvnKyM3kcvd1ZxVYKJ8dC-0MmZX3Hjkx925Vi3Pq7jw1GIXDza8CS3jegZiYpu7VGKoChgp_qFjktaukfxXzhZ_d7bdyGcvm0nO3kgxb7CPL74_NpJPOpihtZnVuiWqIeWAVkdVHHdlynSrbRX3XflWTxJMM6Ct2xL7IQ3_gD8VuKrpqNqt6V5bnma_gjPSzsDx0KFWq73U3IEhsnpIVVHk0pG1CqTRjWDiCjz7mekt6XjcpatpaponA2j6L-azxPexPyvh3rRIAvSw2b69vboeSWG22pUt5QElIrWdIQY7HI6TPKvKTvDbtHK5kni6KEdCCZ0hZ8-_i7WH44rH1aVT4StYAjMGPazTOHtDIX3CEr3jCJg6PmhU0csI7H-isTPwm5Ht5Ork_xbPsyyAMo2KpND8I5shzBZoHYF__03DA3qKKqkogMYZJGZmsEnmC4tbb0aMYc5xUC-55mf5kUskYkBS3pl7TG5ckucNr0h1HOeC5sHIY_01XNGHaRhNVNrtwEU1AGpxzAVmweJNk6LUInEIDH2XeMaPn-jf4S07LhCzM19vVQJSqH9236iApJdqbv8RXHvjgnD60rzKWdFATf3YalwvTLYreZ1_mqlYMxa_T9OumNIbxMpY4VdXArZuIIuNEbhN74TO3egBRrhdc3WG4JLM257WtLK-FHYuKdZ8uFNa5WzIo0XN0AO6B3H1l180iWTMSnx6ondvOqRQ2NzDb7WGr_y56emy0Kfo_HuMqHNl08Gr0SyjWexffkLvOSQ4drGN0er2uwvOUYbpfdQeBxYOtVE91LlidhWKfK6J-wkV1tiIK6DFwDlXYd4_cAW5laTUjlygyk3eyL1s05_k54QHDkw1SvApSxvag22agSBWu3fFuNR6ylTT5-VD3tozNyyynzwzDeHlwGWn9j0bWMNKw9tfe-uAL-WTlLClHSdW3HOJ7IA9zPWp1WwryudsafjqaSdrd-0qT-BUJezljVvI0Osu-V1aOIKiFl7gAaqtzQHlCK6YbMZFAkU0KXw43tcAoO93J0W9zOUIUFoJfiwmnst_r_LFpkHsZWbTcvAt1mTyE7FXkIYEwFH6z9l4MXHpAoasa5XrSjBzxMDQiQoh9aAZWcvE4MPDQIzicuHhNr_fIs2mIFbujxJAg1W4-31ntfhMwivieaU8ub2-gvriO8nXOoHZpzagdFU8W6e9gZsCoOEBPH-w9pG8UpqS-4JgKS3rzn_DQFZBAEiJGOupAmBRHBnGKiwoJPcYchWTQcJGx2-GQ4aBzlS8wwGgoQtvf3ELcXzNXW7LSDlSq5qgg-MWOxSAoiCkfnyYBihIHU4KrdwhrsxxxErkC8q_Dch4XFCCr3frQiBmFP4wzk9-0o4RTyU9nawx9hai-yZ5gOvj6JqUqz5VEPjR_AdKrsombmGUN4rvMDarx20FqzsXSXFf5kO0b_Ow0ZDbhx9zriz12M1GWl-B5eOUFF9HfvtJqqrnUGOFneSmETUIeh8A35kgE8OjjAWa2KklV7PBq64Rov8bB-cdiQx1RNL_0PkP8Tyau_W0daw2l3AapXfIPzH7ggGuc3lODTbQTsJXDoUqiamn77ShL93pnrFIUeOpid2N1q6fYE3APnoOdjZlN3U89aO1ZzGA5KL1ILm9hbYlaEidrFuitGgiXiw_mcHcO5lkS86dcE8d-wVkwslmL8I0ZGl1NoJKU4tGxDQ0Z11y0wcWEGUFw2B3laYPldvInzkGdCf7MX5ceYky65gsu5JEmTeZfH2pL0TFGu_K2yfGdREsyKzMHP3D1_zU-JNHhR7zEdGM2r559fJXwiFQ4uP5QWUunc2qWYNeEfP8oAh2Bilw6kZHbd-R_OMRvzrdDX4fJZ_l9ivRA4pCpa0E2PiCb4Yz1DjN3NrthlXftV_CRGm5DvB2T0CTHpmtTPs8e3m5fo_4WKPVHpdKlRgrcMbEcdmMbXX33gyFksg563SKrNuf996ZeqTiHj68qRDyt-qGUWC0gmYyzy6uSIzkWa_6taV_G8FcFpK5Nc4QfsA5ryG5KBFt3UHxccw57EiH_r894Sa7CchAm7QOqCwwoFFhC_99UXoTtDLB-MjH7KK1BO3EzvBNIGiY6gUDIqQZluVVrYu8kImkL2ESIblGWSRwoe1HtRxV3uyWDXDvKZtifMHynDDuSHPdzL1hrmJmOlmy96NipDOjzG11YhqXgN2e6_dHP0sKrZyV5D0Mr5q-Q2-44LdGBPdFQNsf72xDMY1UMV3YQ1F5Tnm1FGh9NZHKH-X8z5VfGA81A3vqz50OY3s9eqY1pKHGw_fZbVdRU5_n9eJfRBrnn3ueSAI287DytgCWjFLwiFdrzs4RNNlybJT1cnys1bsdnxVx_dFnW_XiKoqhFpv2Q8P5rk2B1kc1ZQJDFGW4kDoSVDTxDNTk7cTm5yRLYhel8PTlEuTj8Bkyi9olPz3k6U3JC_vWdK2Y3DGi24Wmi1LLJ7S3ha319ZLW2v9_ZwjuL6Dueegknjqvs9gNoyS2dK1Nd0o1MFtGZ-V96zzfmcrbm0wGhrRPH_iZPkMt_ibUiu57PXfYm4MX093puoBSJ9jhvTneV6civ38idAj2YxLBxyxpmn6x-3dkgivFzFOp-_P6QpYDwx2dFr_jpqD7K_CvZ1InoKkOIvVlD6_m6XGfv0cn4paKdAZuO5giZb1Vai0-TBj6kLuU2UtdNW91ZpvLl_YP0gdtw4nofAeVkNP-aiTWi6Nyweio9s5SC53UKhsagi7eCO0d_j3mFv7LGtJu9vR39WXWfXG2KNawurZGRrBpjBf-B-134k-wwA5USjrnW3P_eTkHqGXAIAOagVzeuYN_b5KtZAmYJZAZNSYny7HC-AiCxWnxyE8ZAdHT7Cr2VIYjjWrMQSPIECETk0qCpKrRZsrBlaCmqtWANxVHc57nuXrS6czXms7JIkqxzZfmrBpMopFlm70SsnQLbjajOj6y3VvOr4x5QvJjQnfzAtDG1ipEuhPHedrmSjmr15q7yDY1ii8N9mmJq7Hl0Kw4ZRA-bj5BuQl_pEdVR0BQnpDRQM1WQzKw4ukGYD6jXiTlPdLXq63rPT84ruxhquMUdKuOljI2pGzma9mvn4jTwf6T2l5z7hqZiELKiVsf4HRQbqVYRjHPgbiFmcZ--cKK3yLICT694yHcdghQlKgnvpyxzyNbqNjCLa6nC9V11yVf6aXioPjwr9okR_B6iF8nfW7cqhTcrnTPORDzNkHmCjCXPsWpmVu_l4kM3cGb3KzRPNcAGUMdN1uP0DmY0RQhSZU3IA986hbDVOVuhCAdcl9wksM2p2A9fmXTtgiUDzKCD-e0gUEzmKF-h8wAuWBEJPDdb4RsWQyPTRxUQBqbFirM5VXEGqa0mwNzVUSRRCfSC-xdcnbx3vfCg5TRL1SfkxIES_IDrXfB9m6eMNiG1tWIiq85-b_bYNdXagysFwE7GxtRXXYAue_tSUD8M6CUfsUd79rBqnsAUDfNYNWCgvOekAsp9okD0wGyKgG_dXBKgu4iECS7QiU6Z2Q_sVJ5ZmQgo7P0yoXyNPVO_rYHZEBDHwkRx7eYgHZtZXfOTgFghgVWUEjYr8IBjTaNFLSJ2DLG07P19Cdg0zDLCr7ukSfTdVJNwuOmjCd-I_0pEAlhF3Y0K-46srPtx2DUjMo6bUfIUAQTa6ubw4IpWK9fEth64TLPYQZRRQDWefmSUgtga2P2zz_WZZgfj-o-Inhsys9old2ZuOomiDDW8QrAicl-fvYrKubTkTOz48H6nbsN2Elipnx9OF1k58_2rjWZ8uxitAcO9Oqdn87OqCHTE4YFbeUmzFRSTJeQye6dfx0mJwyXLIJ6Nkt6BDKnJWFsZN8qomijToMFUOxORH6zliuU1SXVUJ_SO_lgnxNlvynzTLkct65OBzeSkwgitrUz4s4OZ6U0rvUBhobgoNRKPOSd82K2zG-Pf-nEIJnv3mo3sYUXhUb3t95RQgBBIVNcGMd6wlZcJiuDZEaCQrw2M_jT1W0XHpu1TM8k08zYoJlrSEpvL_9tBcc_lYGQqcOKymjc_rd0StHudD0xTtMzdPQBIPGE7MUOqS4H_A4wiiHMFDyF2YvXX9ApoYV0zXpsn7qhAwcMDg3nwIDE99gT3MCxuoOoblFAEODfXX9maroIxGnKkgXdhYgG5_uFweC2RKBdXGNyWX1tEWfOGCroJUuH0ayk6MHy77Ztjn6X-OqVRHaHC5AGMaYTAYgiUsqz-8DehhKKHB-l9Pzn9lbdRIS1JseSPrWl9ydeKEvj-rmQYSrBUY8kcB7Gh0DlvWE3tfuUrH5NDMzrH_EYLh6f69yJJzZdAJG2ZsY-9mhZnL7aQQCkzY7h9iGjId_7jDROsjaK3kGJq4Y7IWGMpXbmyKXWhyTK0UrlEVbKzAOdyBSwgukcODSUDNDz_LBtpTQpqsdO0VUGy2hDcQWDInCC2DOSVqQxTQO-7GIqU9IfdVqurc9JzEJ1oxjbpFObVY8NnQnLfE4tS74wIF4VRJORW3ycb8Y6fCQvQBvrw07g6y20AFmUHA1nZKGeHBlau2JreFSWNwUH-hnezBpCl4V1WjZUAYWaUF8_5Xt-uB-n4daQ5rABs5cyCER0KUmxppAhiq6_iNj0Fwp8cQy1dZMR4M5rJHodwFleN2_917Y-SKfJoWAZ3bVQpQh-IDlt9c2pRqHTACfdyw5h993MVGyDNljpk47t_mkREaqluNKptjP5LjUBKRJa3DYDZUEpZzG2hki9C7MgEI1tEx99VeQQqiq2bZsk1L843jE57Xlv8CNVRjkPlrzFB7xmp6UbujIjvDsCuUJzfVYg52qmMDIa4xuzoYx0K-YHhZr5teEpGS-H0JebbWPgjsTDehrIT9SIUL8DVkt5UFjq2cpoqVGBAnZ1k3Z19XspTcfqL9RGqmhjZ-OWgu-lHL6yYuONxPY8ealPC5KgHj9815B4wA4QIHXLymosdmficO_BvlrzTEn_7LX_Ma-SlwwVj0Ddx6Ts2ukBQpYayK7KVopMOLsRRc702mfSXCEqce0BwVV-GQWDQ8d35FidkYuYtzE_NM76K3Xb27k1bgEzlINLEdO8G_Pzhm1qauliJoD_4SsFekvm3EpWqcnGG4hgvkJk6OJiuEntas5CvEy2xygX2cZO7nSjSFBhcyRJ5KXJbY4R9bmK8tXJuE7S5NGpk6_6Ml722KOzCAMfSMFkEoW_Ha9yk_7XVsHv1m5aOBY2Ut3-6jOVkq_xZQIYraqgqeOtQV-tGDT4uic2SEksNLdURArDXg1Di0eDmkpEAjaO8x-3CSNco48yBlTTaRLXBoibVMZLMNW6TmEn5VhJJlUg2wk6DYvJB-sjoPy9V_CRcq5hSWjxxmHydG-AEgd4ldVqkMNhaz5QSkrMuzW1ul3lEsGr69A6BB1iSnTJkOiIrtY8_5euxXeaOOIrKkt9k3R26OHJvTM-8sSdQf7q8JwX4ID87p4BDksM6rUd6Zwsn4yfZAO96xvHRoNNFiErykI2y51Vr-J3TtSaELVi69Y5jyk3tohU_k4fi3qZsP3eMbS7Z-yONfWwoM0yQHCkP_7yO6bhsF9NLE7CoGT-YwZe7UAXnwfu3WZb-H8RuXDDYYxcthx2OvZilQbh_8OKLjqon0qGfju0O0pse0w_oQ9yZSGiLEj8mPzklIqRpFqYs9j22x5e_NVplHFbwCJfhjz5GkmCLzS5xIwzId05Iwp2XOTRongl53-sKXmVdN3QFEai5SS-W16D-3v4uDqVsg-GeF8_TmkG7XvyeReLeZaKSGx1pY5JI9A2Us5xIXHVWTzm4-9VDmhf04W9rcQqWlRvxZ2gON25psICKdgC7brS5VECOX2Epcq2GpNt0qZk718WzvYsNT4j5Wlbcsk_CksZ1-P8Qi6qpfpyrRhcxgELLTKZlUpU4ZVqdyL-2OVOWGwS8A5KhhAbnl1AEu1yNZomQTZjV4FQp8oE3W0AJlMbNNzAwtkQQIQUEbz3X9EyVWfh9p6JnRlqGAyRdroQJWqP3qzir-n0K_S-HntG55dVJ95RKKpwZZ0vKpHJYWS29nYjDctY6hPv2NJxVMd6wcWP0_20D1ZGdkYKhMQ5WuTLwOhVzIvYPYZ1ixhfo691aoBRZDxy7k7WkCEgnwcM7MjDS3PUr-om1inyAwMpGp8s7ojj73ux2Pd0BJNYn_AlxgfQVqqziPKRznHC1kSWfYJ1zjsaJ7j0_D_1oAqnow9mfn5fsDkSjMOKNKRsmVcThrXL5vM-yuHxHEPJomBXkHEhWficBBzmyOjXGEZwK1M8DFZZ-c8CLkptZ2SVgMwslTIrvlL6_oaOLAxk8rdrG0Rna_05mUbMD-CrNQD9o3oNuEBPhJ83_zKAsUOqWikBrA9joNSjRrb8mbmmJhLtat-ToaTKKQ2zSkB1wZE7L0DMwSJky3iyelC8Z75VLGsj7t9In_O99_J3TJKFjuiO4LDlXMrvJ8vRjo66jFPwliygq-nS8MIi5_ubhiwUj1ahcz-j_c9T26w9W1N881WLFyiJLH2lwB-hVXAml208s6bzhfdcJMRBEdm2_N3jiwOWs3Gj0mFwngq0aIESer90kBpVHEzNeVfhaKFDLdGaFkilToc2rOqwAhysQe5rcQwBcYxgXXd1b44Gwy4wKwjKRKUBSOjmquWEY1FVuq8lxOeZK9zruAfWI73QQM_1MZaG-RmgcxfmYYZHike3D8U2_EPCOwSCHvMOumEkIanole0Hyay37TiVRBl57KWHq2Mlnz61_XRJztbvkZuwOxRdcDcFgdeJwHCoLYVWfYhVupyFuzI3VAjO5h3NZoyub6B0wWibrk6FRdUz4l-7Rhl0QxGO9MOidLTLMY2NVgAdJ8g_gI4YbybBADGasan2HLpdBJyGyl4aDR3eUqgFhL-su49ASnl_sgiIqXOPaIMi7t_EOjt6rDPpExTGAHXskYvAfB2_8n01qZ2SOnXwU3TXCNhYdKzPyIQstzPIWOmjkf3_ch6ejbQuw6X5UQdx_GBJnX65_BOU8KvqOPXDJwjmAkqaXMJoW0Vl8ZqdyVaq5CnZvoh814U2-H3orcv67a-NHx3Xq7kGbMXAY-Uy-IrAMZ0_h5yewCo_sUP2_mQcOVqWHEKvsLgpNqhYC3MDV8gr0lkmOY62PEAnfdRhfvyjz-dE7qCYXX3QhcmCjOcH2r8aY2nUMQoIolVctKwuhP96erp7mtdbMUL_NNWBgUkhR7Wlx4e1P9ZhP96J-Jskk1MeV4U8d3o1xHLoBS2YjVrrofK4toLcPtGwpenWLkU-zCqiVhhmht9ME0kgkKjebJzu-Q4yk8z18WprTMqyXyV0AHQu5Vi6QSKiGGKxk1q1mVcG1_b_QTc3HCFFXIxPmohLtFkbvN7ZDmVEsUren20K-behtH6WmSeAl-kUldWvdoA-KS1YRd7IYEi31QjCEFsRn-9EhTydad6NTShwwFhmprURTzztXVAyIgpy8mt7eGCAS0DOXwd0_daKglD0n1LDLt0X_lNhXlQrjkd-jHqtFiH83Cr7jSuB2lwH50GcBEQRmsRnhFTB4RDgPvsQv4wmIhcYTdas19nA8DtnokrKyubOA0GNUd14uLewo-bY3i2uF7NpqpMdm14dt2okbAw5An7wpij4gC597-ha_7ZMj1RZTo95rKgjmWnKRBm8-IEIvkwLle8Mf9Jtcw_ZG8ToL7dDmCDFBASOSjoM0hEySHq4sKMDhe9ij9vY1DCyQgLBV08co74mIsok0afodsFZxe5TfL6OZXBgw9jDcEW-xsf3i35MVp1Nb7ZkMdvPOt8F09xamfICf9lCfCTZiZy0OT0se4Cyjg-U5Vbx7VJnVFyHkZq_mRqvHQCzyWkQKlk1I47CT4pOVr6fQRYrIYCOJVCn1m_lzu5jBXOhk1d34IeVEzeIGEw6-ul6adUmInJEIVO-D6yy_TKRulnRYecMu56VmzaCqXuD_29tOoKcE6e3pH2n9ffdTj0tlenX1SRme6EL6O0UYufslQb4zUYK47IAoSn6ZC5B8g_DIVB-K2RXltSGcUQrYUv7xx0XMrZe6JjsOxjBdO910002mGa3IKbgnjmSrNh3RUAhhuKgkTNuinV8c3ebyfc7MMHtkrK0WxbGFxu-J9AZJEy3NOevlV1IPZTnMDUUMXHG2rsCwSCr3qFDQl4MF82t8jULmik66IQtNyT9ATou8xAgl4mzkB3_TWrtWbXNt3jpidjtmwoCGsp822JaiUZH2V8UjTNMprxtXsKu7vsHUA-DeGNSiBaQXNb6cKkRdxqxBOQyrgj9rUz_gHnufbyPoySgGSrW18qMBsHB7xq2m3Y5eCL510gBzi4RcLM8kFaQKNgeneU1ylIV1HhOrjOlyWnBvPGoNuZhNTK5bR5EZ_-4hZ6Vn7jK69unXmxOyv9TQrFK5vhtvWqK26cRwJ3LCxdBiu2MxMXokAmXPY7yGOP9q9qcSidjKWNX5_jjKpH_YwLH366bFltFexMwiHc9dN7WNMABsBQXqwXoP6la_M8EA8FphCB_L3VFAUX-ioT3FtqqUJUVk_AzonLA-Fgrl6DkNJzHhyqr7zqUTuRXDKqfMg6nnPfiv0cih_rvLCiYTD15T4rsjeo4p1Umb-LI29yRwr1dLjHYSIQzUbAk5A4dMMDq9BtCgX6DsbRqpNnAWHQsWWdIuNwunAPsfhKiXOyx9Svus-mCH9melOgQf7M0AcjNSRr0vkJBsGSQU3iPhj2-_mhCJf-p8wmPfWXxVmVufbcSNbPzKKZgTMw7JOqhP6BW8TS4-RJ3B5nZ-Yrc_yAKMyDaKpNciRcRBKsCuG5AzXTVldfO3jGZIbN0KJ7ttoT8s5u6L5mSmiPUohSc02n3hRUF4YN_v_tUFU0kruxMJM8PWGtP9uCHMii-Zl44Cu90Gvn27GCrz77x1j-vcUPHsGm0YzjMd7fQmLE7pJDuKQMXFfP6CpwLd6MFvYV7amCWHXuq4l2D9KQxBqyVGgP2cp6Ebc9tjouYPTkgUC2Sc1OVXG-Qfp2RgkhuJ1KZsLeRIuHYTq-LsIMFf-a987xV3xf9xIKhUnoshHxgKhhSpyIxk0DQvaxSpQYi_MQqkrEYJxkrxny2mn-FdyfCKj1GDfGXobt1mQVy0dHtdc1xmMhBmvvGocLJTEgrHPtVYw64B0z1w8HXHyiqYSneYqEIWO3OLmthiW4Zfzigc-RIg8yU2xeXZFOntI1dyTW_K7f2AZuZwrH9vWHIR5qP_P-qTUje7dZxk2uz5-QnsqtbmQEoVqyMZPBNXTsndTQIk1qu_3Njxe9hxUPRKHk8Ol_4s7aLpnnpA2msh3qFCODb1kQQtzU_u1OJ41Qnpdj12jMkliFL6OSWiHo5BvWV7XPdoOiIMCkqHR3W_RG_Jr4z4XWJ4I_aJmHAwrvW_OwIql9llgf-mw3muBHfk7Y1ZmafWomVMDM_Xay7Q5dlc325jxgqS2KN6_368eI9yKDA2Nr4zkFGLHYi9f-';
+    const instrumentVersion = 'bfi2-ru-60_shkuratova-56-v1';
+    const get = id => document.getElementById(id);
+    const survey = get('survey');
+    const next = get('next');
+    const back = get('back');
+    const error = get('error');
+    const intro = get('intro');
+    const questions = get('questions');
+    const items = get('items');
+    const pageSize = 10;
+    const draft = { bfi: Array(60).fill(null), shkuratova: Array(56).fill(null) };
+    const sections = [
+      { key: 'bfi', title: 'Черты личности', instructions: 'Выберите степень согласия с каждым утверждением. Я — человек, который…',
+        options: [[1,'Совершенно не согласен'],[2,'Немного не согласен'],[3,'Нейтрально, нет мнения'],[4,'Немного согласен'],[5,'Совершенно согласен']] },
+      { key: 'shkuratova', title: 'Поведение в общении', instructions: 'Оцените, насколько каждое утверждение характерно для вашего поведения.',
+        options: [[0,'Совсем не характерно'],[1,'Характерно'],[2,'Очень характерно для меня']] }
+    ];
+    let pages = [];
+    let page = -1;
+    let responseId;
+    let sending = false;
+    let pendingPayload;
+    const decode = value => Uint8Array.from(atob(value.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+
+    async function openInvitation() {
+      const match = /^#invite=([A-Za-z0-9_-]{43})$/.exec(decodeURIComponent(location.hash));
+      if (!match) return;
+      const key = await crypto.subtle.importKey('raw', decode(match[1]), 'AES-GCM', false, ['decrypt']);
+      const packed = decode(encryptedItems);
+      const plain = await crypto.subtle.decrypt({ name:'AES-GCM', iv:packed.slice(0,12) }, key, packed.slice(12));
+      const data = JSON.parse(new TextDecoder().decode(plain));
+      for (const section of sections) {
+        const statements = data[section.key];
+        if (statements.length !== draft[section.key].length) throw new Error('Invalid questionnaire length');
+        for (let start = 0; start < statements.length; start += pageSize) {
+          pages.push({ ...section, start, statements: statements.slice(start, start + pageSize) });
+        }
+      }
+      responseId = crypto.randomUUID();
+      get('invite').hidden = true;
+      survey.hidden = false;
+      get('credits').hidden = false;
+    }
+
+    function updateProgress() {
+      const answered = Object.values(draft).flat().filter(value => value !== null).length;
+      get('progress').value = answered;
+      get('progress-label').textContent = 'Отвечено ' + answered + ' из 116 · Страница ' + (page + 1) + ' из ' + pages.length;
+    }
+
+    function render() {
+      error.hidden = true;
+      intro.hidden = page >= 0;
+      for (const control of intro.querySelectorAll('input, select')) control.disabled = page >= 0;
+      questions.hidden = page < 0;
+      back.hidden = page < 0 || Boolean(pendingPayload);
+      next.textContent = page < 0 ? 'Начать опрос' : page === pages.length - 1 ? 'Отправить ответы' : 'Далее';
+      items.replaceChildren();
+      if (page < 0) {
+        get('age').focus();
+        return;
+      }
+
+      const current = pages[page];
+      get('section-title').textContent = current.title;
+      get('instructions').textContent = current.instructions;
+      for (const [offset, statement] of current.statements.entries()) {
+        const index = current.start + offset;
+        const field = document.createElement('fieldset');
+        const legend = document.createElement('legend');
+        legend.textContent = (index + 1) + '. ' + statement;
+        field.append(legend);
+        for (const [value, label] of current.options) {
+          const choice = document.createElement('label');
+          choice.className = 'choice';
+          const radio = document.createElement('input');
+          radio.type = 'radio';
+          radio.name = current.key + '-' + index;
+          radio.value = value;
+          radio.required = true;
+          radio.checked = draft[current.key][index] === value;
+          radio.addEventListener('change', () => {
+            draft[current.key][index] = value;
+            updateProgress();
+          });
+          choice.append(radio, document.createTextNode(label));
+          field.append(choice);
+        }
+        items.append(field);
+      }
+      updateProgress();
+      get('section-title').focus();
+      window.scrollTo(0, 0);
+    }
+
+    back.addEventListener('click', () => {
+      page--;
+      render();
+    });
+
+    survey.addEventListener('submit', async event => {
+      event.preventDefault();
+      if (sending) return;
+      if (page < pages.length - 1) {
+        page++;
+        render();
+        return;
+      }
+      if (!pendingPayload) {
+        pendingPayload = JSON.stringify({
+          id: responseId,
+          age: Number(get('age').value),
+          gender: get('gender').value,
+          consent: get('consent').checked,
+          bfi: draft.bfi,
+          shkuratova: draft.shkuratova,
+          instrument_version: instrumentVersion
+        });
+      }
+      sending = true;
+      back.disabled = true;
+      next.disabled = true;
+      next.textContent = 'Отправляем…';
+      error.hidden = true;
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { apikey: publishableKey, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+          body: pendingPayload,
+          signal: AbortSignal.timeout(15000)
+        });
+        if (!response.ok) {
+          const result = await response.json().catch(() => ({}));
+          if (response.status !== 409 || result.code !== '23505') throw new Error('Submission failed');
+        }
+        survey.hidden = true;
+        get('success').hidden = false;
+        get('success').querySelector('h2').focus();
+        window.scrollTo(0, 0);
+      } catch {
+        error.textContent = 'Не удалось подтвердить отправку. Ответы остались на этой странице. Проверьте подключение и повторите отправку.';
+        error.hidden = false;
+        for (const control of items.querySelectorAll('input')) control.disabled = true;
+        back.hidden = true;
+        next.textContent = 'Повторить отправку';
+      } finally {
+        sending = false;
+        next.disabled = false;
+      }
+    });
+
+    openInvitation().catch(() => {
+      get('invite-note').textContent = 'Не удалось открыть опрос. Проверьте, что ссылка из приглашения скопирована полностью.';
+    });
+  </script>
+</body>
+</html>
